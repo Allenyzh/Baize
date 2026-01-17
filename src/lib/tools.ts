@@ -117,4 +117,28 @@ export const tools = {
       }
     },
   }),
+
+  NAVGATE_TO_URL: tool({
+    description: "Navigate the current active tab to a specified URL",
+    inputSchema: z.object({
+      url: z.string().describe("The URL to navigate to"),
+    }),
+    execute: async (input) => {
+      if (!input.url) return "Error: Missing 'url' argument.";
+
+      try {
+        const res = await browser.tabs.sendMessage(activeTabId, {
+          type: "NAVIGATE_TO_URL",
+          payload: { url: input.url },
+        });
+
+        const response = res as { success: boolean; error?: string };
+        return response.success
+          ? `Navigating to ${input.url}...`
+          : `Error navigating to URL: ${response.error}`;
+      } catch (e: any) {
+        return `Error navigating to URL: ${e.message}`;
+      }
+    },
+  }),
 };
