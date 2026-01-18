@@ -32,6 +32,7 @@ export const Chat: React.FC<ChatProps> = ({ onOpenSettings }) => {
     handleSubmit,
     isLoading,
     config,
+    sendMessage,
   } = useBaizeChat();
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [playingMessageIndex, setPlayingMessageIndex] = useState<number | null>(
@@ -59,8 +60,7 @@ export const Chat: React.FC<ChatProps> = ({ onOpenSettings }) => {
   };
 
   const handlePromptClick = (prompt: string) => {
-    handleInputChange({ target: { value: prompt } } as any);
-    textInputRef.current?.focus();
+    sendMessage(prompt);
   };
 
   const handlePlayMessage = async (text: string, index: number) => {
