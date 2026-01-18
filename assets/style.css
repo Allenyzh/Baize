@@ -535,6 +535,7 @@ a {
   color: inherit;
   outline: none;
   min-height: 44px;
+  min-width: 100px;
   transition:
     border-color 150ms ease,
     box-shadow 150ms ease;
