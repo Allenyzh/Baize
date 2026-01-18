@@ -114,6 +114,11 @@ body {
   background-repeat: no-repeat;
 }
 
+body::selection {
+  background: var(--accent);
+  color: #ffffff;
+}
+
 button,
 input,
 select,
@@ -520,6 +525,10 @@ a {
   align-items: center;
 }
 
+.composer-row--multiline {
+  align-items: flex-end;
+}
+
 .composer-actions {
   display: flex;
   align-items: center;
@@ -544,9 +553,41 @@ a {
   min-height: 44px;
   min-width: 100px;
   width: 100%;
+  resize: none;
+  line-height: 1.4;
+  overflow-y: hidden;
   transition:
     border-color 150ms ease,
     box-shadow 150ms ease;
+  caret-color: var(--accent);
+}
+
+.input-field--multiline {
+  overflow-y: hidden;
+  max-height: calc(1.4em * 5 + 20px);
+}
+
+.input-field--scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 106, 61, 0.3) transparent;
+}
+
+.input-field--scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.input-field--scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.input-field--scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 106, 61, 0.45);
+  border-radius: 999px;
+}
+
+.input-field--scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 106, 61, 0.7);
 }
 
 .input-field::placeholder {
@@ -597,7 +638,7 @@ a {
   box-shadow: var(--shadow-soft);
   position: absolute;
   right: 4px;
-  top: 4px;
+  bottom: 4px;
   width: 36px;
   height: 36px;
   padding: 0;

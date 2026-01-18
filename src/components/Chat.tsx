@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useLayoutEffect, useState } from "react";
 import {
   Send,
   Settings as SettingsIcon,
@@ -42,7 +42,10 @@ export const Chat: React.FC<ChatProps> = ({ onOpenSettings }) => {
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [isMultiline, setIsMultiline] = useState(false);
+  const [isOverLimit, setIsOverLimit] = useState(false);
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -56,9 +59,33 @@ export const Chat: React.FC<ChatProps> = ({ onOpenSettings }) => {
     return () => cancelAnimationFrame(raf);
   }, [messages]);
 
+  const setInputValue = (value: string) => {
+    handleInputChange({ target: { value } } as any);
+  };
+
+  const focusComposerInput = () => {
+    const setCaretToEnd = (el: HTMLInputElement | HTMLTextAreaElement) => {
+      const len = el.value.length;
+      el.setSelectionRange(len, len);
+    };
+    if (isMultiline) {
+      const el = textAreaRef.current;
+      if (el) {
+        el.focus();
+        requestAnimationFrame(() => setCaretToEnd(el));
+      }
+    } else {
+      const el = textInputRef.current;
+      if (el) {
+        el.focus();
+        requestAnimationFrame(() => setCaretToEnd(el));
+      }
+    }
+  };
+
   const handleVoiceTranscription = (text: string) => {
-    handleInputChange({ target: { value: text } } as any);
-    textInputRef.current?.focus();
+    setInputValue(text);
+    focusComposerInput();
   };
 
   const handlePromptClick = (prompt: string) => {
@@ -115,6 +142,90 @@ export const Chat: React.FC<ChatProps> = ({ onOpenSettings }) => {
     handleSubmit(e, attachments);
     setAttachments([]);
   };
+
+  const submitIfReady = (e: React.SyntheticEvent) => {
+    if (!isLoading && (input.trim() || attachments.length > 0)) {
+      handleSubmit(e as unknown as React.FormEvent, attachments);
+      setAttachments([]);
+    }
+  };
+
+  const handleSingleLineKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+  ) => {
+    if (e.key === "Enter") {
+      if (e.shiftKey) {
+        e.preventDefault();
+        setInputValue(`${input}\n`);
+        return;
+      }
+      e.preventDefault();
+      submitIfReady(e);
+    }
+  };
+
+  const handleMultiLineKeyDown = (
+    e: React.KeyboardEvent<HTMLTextAreaElement>,
+  ) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      submitIfReady(e);
+    }
+  };
+
+  const getTextMetricsTarget = () =>
+    textInputRef.current ?? textAreaRef.current;
+
+  const shouldWrapToNextLine = (value: string) => {
+    const el = getTextMetricsTarget();
+    if (!el) return false;
+    const style = window.getComputedStyle(el);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return false;
+    ctx.font = `${style.fontStyle} ${style.fontVariant} ${style.fontWeight} ${style.fontSize}/${style.lineHeight} ${style.fontFamily}`;
+    const textWidth = ctx.measureText(value).width;
+    const paddingLeft = parseFloat(style.paddingLeft) || 0;
+    const paddingRight = parseFloat(style.paddingRight) || 0;
+    const availableWidth = el.clientWidth - paddingLeft - paddingRight;
+    return textWidth > availableWidth;
+  };
+
+  useEffect(() => {
+    if (!isMultiline) {
+      setIsOverLimit(false);
+      return;
+    }
+    const el = textAreaRef.current;
+    if (!el) return;
+    const style = window.getComputedStyle(el);
+    const fontSize = parseFloat(style.fontSize) || 14;
+    const lineHeight =
+      parseFloat(style.lineHeight) || Math.round(fontSize * 1.4);
+    const paddingTop = parseFloat(style.paddingTop) || 0;
+    const paddingBottom = parseFloat(style.paddingBottom) || 0;
+    const maxHeight = lineHeight * 5 + paddingTop + paddingBottom;
+    el.style.height = "auto";
+    const nextHeight = Math.min(el.scrollHeight, maxHeight);
+    el.style.height = `${nextHeight}px`;
+    setIsOverLimit(el.scrollHeight > maxHeight + 1);
+  }, [input, isMultiline]);
+
+  useLayoutEffect(() => {
+    const hasNewline = input.includes("\n");
+    if (hasNewline) {
+      if (!isMultiline) setIsMultiline(true);
+      return;
+    }
+    const wrapNeeded = shouldWrapToNextLine(input);
+    if (wrapNeeded !== isMultiline) {
+      setIsMultiline(wrapNeeded);
+    }
+  }, [input, isMultiline]);
+
+  useEffect(() => {
+    focusComposerInput();
+  }, [isMultiline]);
 
   const renderMessageContent = (msg: any) => {
     if (typeof msg.content === "string") {
@@ -309,7 +420,11 @@ export const Chat: React.FC<ChatProps> = ({ onOpenSettings }) => {
           )}
 
           <form onSubmit={onFormSubmit} className="composer-form">
-            <div className="composer-row">
+            <div
+              className={`composer-row${
+                isMultiline ? " composer-row--multiline" : ""
+              }`}
+            >
               <input
                 type="file"
                 multiple
@@ -321,21 +436,37 @@ export const Chat: React.FC<ChatProps> = ({ onOpenSettings }) => {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="icon-btn"
+                className="voice-btn"
                 disabled={isLoading}
                 title="Attach image"
               >
                 <Paperclip size={20} />
               </button>
               <div className="input-wrapper">
-                <input
-                  ref={textInputRef}
-                  value={input}
-                  onChange={handleInputChange}
-                  placeholder={t("chat.placeholder")}
-                  className="input-field"
-                  disabled={isLoading}
-                />
+                {isMultiline ? (
+                  <textarea
+                    ref={textAreaRef}
+                    value={input}
+                    onChange={handleInputChange}
+                    onKeyDown={handleMultiLineKeyDown}
+                    placeholder={t("chat.placeholder")}
+                    className={`input-field input-field--multiline${
+                      isOverLimit ? " input-field--scroll" : ""
+                    }`}
+                    disabled={isLoading}
+                    rows={1}
+                  />
+                ) : (
+                  <input
+                    ref={textInputRef}
+                    value={input}
+                    onChange={handleInputChange}
+                    onKeyDown={handleSingleLineKeyDown}
+                    placeholder={t("chat.placeholder")}
+                    className="input-field"
+                    disabled={isLoading}
+                  />
+                )}
                 <button
                   type="submit"
                   className="primary-btn send-btn"
