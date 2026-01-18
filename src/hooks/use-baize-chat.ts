@@ -31,11 +31,10 @@ export function useBaizeChat() {
     }
   }, []);
 
-  const handleSubmit = useCallback(
-    async (e?: React.FormEvent, attachments?: File[]) => {
-      e?.preventDefault();
+  const sendMessage = useCallback(
+    async (text: string, attachments?: File[]) => {
       if (
-        (!input.trim() && (!attachments || attachments.length === 0)) ||
+        (!text.trim() && (!attachments || attachments.length === 0)) ||
         !config
       )
         return;
@@ -43,8 +42,8 @@ export function useBaizeChat() {
       setIsLoading(true);
 
       const contentParts: any[] = [];
-      if (input.trim()) {
-        contentParts.push({ type: "text", text: input });
+      if (text.trim()) {
+        contentParts.push({ type: "text", text: text });
       }
 
       if (attachments && attachments.length > 0) {
@@ -53,11 +52,6 @@ export function useBaizeChat() {
             const reader = new FileReader();
             reader.onloadend = () => {
               const result = reader.result as string;
-              // Remove data URL prefix (e.g., "data:image/png;base64,") if the API expects just base64,
-              // BUT the AI SDK usually expects the full data URL or handles it.
-              // Checking AI SDK docs or common usage: usually `image` part takes a URL or base64.
-              // For `experimental_attachments` or standard `content` array with `image` type:
-              // Vercel AI SDK `CoreMessage` `UserContent` `ImagePart` expects `image` which is Uint8Array | ArrayBuffer | string (url/base64).
               resolve(result);
             };
             reader.readAsDataURL(file);
@@ -152,7 +146,15 @@ export function useBaizeChat() {
         setIsLoading(false);
       }
     },
-    [input, config, messages],
+    [config, messages],
+  );
+
+  const handleSubmit = useCallback(
+    async (e?: React.FormEvent, attachments?: File[]) => {
+      e?.preventDefault();
+      sendMessage(input, attachments);
+    },
+    [input, sendMessage],
   );
 
   return {
@@ -161,6 +163,7 @@ export function useBaizeChat() {
     handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) =>
       setInput(e.target.value),
     handleSubmit,
+    sendMessage,
     isLoading,
     config,
   };
