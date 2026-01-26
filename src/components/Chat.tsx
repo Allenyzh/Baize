@@ -1,4 +1,10 @@
-import React, { useRef, useEffect, useLayoutEffect, useState } from "react";
+import React, {
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useCallback,
+} from "react";
 import {
   Send,
   Settings as SettingsIcon,
@@ -25,6 +31,9 @@ const PROMPT_KEYS = [
   "chat.prompts.studyNotes",
 ];
 
+const MAX_TEXTAREA_LINES = 5; // Matches max-height in CSS
+const LINE_HEIGHT_MULTIPLIER = 1.4; // Matches --line-height-input in CSS
+
 export const Chat: React.FC<ChatProps> = ({ onOpenSettings }) => {
   const {
     messages,
@@ -43,6 +52,7 @@ export const Chat: React.FC<ChatProps> = ({ onOpenSettings }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const measureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isMultiline, setIsMultiline] = useState(false);
   const [isOverLimit, setIsOverLimit] = useState(false);
@@ -63,7 +73,7 @@ export const Chat: React.FC<ChatProps> = ({ onOpenSettings }) => {
     handleInputChange({ target: { value } } as any);
   };
 
-  const focusComposerInput = () => {
+  const focusComposerInput = useCallback(() => {
     const setCaretToEnd = (el: HTMLInputElement | HTMLTextAreaElement) => {
       const len = el.value.length;
       el.setSelectionRange(len, len);
@@ -81,7 +91,7 @@ export const Chat: React.FC<ChatProps> = ({ onOpenSettings }) => {
         requestAnimationFrame(() => setCaretToEnd(el));
       }
     }
-  };
+  }, [isMultiline]);
 
   const handleVoiceTranscription = (text: string) => {
     setInputValue(text);
@@ -180,8 +190,10 @@ export const Chat: React.FC<ChatProps> = ({ onOpenSettings }) => {
     const el = getTextMetricsTarget();
     if (!el) return false;
     const style = window.getComputedStyle(el);
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+    if (!measureCanvasRef.current) {
+      measureCanvasRef.current = document.createElement("canvas");
+    }
+    const ctx = measureCanvasRef.current.getContext("2d");
     if (!ctx) return false;
     ctx.font = `${style.fontStyle} ${style.fontVariant} ${style.fontWeight} ${style.fontSize}/${style.lineHeight} ${style.fontFamily}`;
     const textWidth = ctx.measureText(value).width;
@@ -201,10 +213,12 @@ export const Chat: React.FC<ChatProps> = ({ onOpenSettings }) => {
     const style = window.getComputedStyle(el);
     const fontSize = parseFloat(style.fontSize) || 14;
     const lineHeight =
-      parseFloat(style.lineHeight) || Math.round(fontSize * 1.4);
+      parseFloat(style.lineHeight) ||
+      Math.round(fontSize * LINE_HEIGHT_MULTIPLIER);
     const paddingTop = parseFloat(style.paddingTop) || 0;
     const paddingBottom = parseFloat(style.paddingBottom) || 0;
-    const maxHeight = lineHeight * 5 + paddingTop + paddingBottom;
+    const maxHeight =
+      lineHeight * MAX_TEXTAREA_LINES + paddingTop + paddingBottom;
     el.style.height = "auto";
     const nextHeight = Math.min(el.scrollHeight, maxHeight);
     el.style.height = `${nextHeight}px`;
@@ -221,11 +235,12 @@ export const Chat: React.FC<ChatProps> = ({ onOpenSettings }) => {
     if (wrapNeeded !== isMultiline) {
       setIsMultiline(wrapNeeded);
     }
-  }, [input, isMultiline]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input]);
 
   useEffect(() => {
     focusComposerInput();
-  }, [isMultiline]);
+  }, [focusComposerInput]);
 
   const renderMessageContent = (msg: any) => {
     if (typeof msg.content === "string") {
@@ -443,7 +458,7 @@ export const Chat: React.FC<ChatProps> = ({ onOpenSettings }) => {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="voice-btn"
+                className="attach-btn"
                 disabled={isLoading}
                 title="Attach image"
               >

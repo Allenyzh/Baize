@@ -28,6 +28,7 @@
   --chat-bg-user: #ff6a3d;
   --chat-bg-ai: var(--surface-2);
   --input-bg: #fdf6ec;
+  --line-height-input: 1.4;
 }
 
 /* @media (prefers-color-scheme: dark) {
@@ -114,7 +115,7 @@ body {
   background-repeat: no-repeat;
 }
 
-body::selection {
+::selection {
   background: var(--accent);
   color: #ffffff;
 }
@@ -554,7 +555,7 @@ a {
   min-width: 100px;
   width: 100%;
   resize: none;
-  line-height: 1.4;
+  line-height: var(--line-height-input);
   overflow-y: hidden;
   transition:
     border-color 150ms ease,
@@ -564,7 +565,7 @@ a {
 
 .input-field--multiline {
   overflow-y: hidden;
-  max-height: calc(1.4em * 5 + 20px);
+  max-height: calc(var(--line-height-input) * 1em * 5 + 20px);
 }
 
 .input-field--scroll {
@@ -705,7 +706,8 @@ a {
   align-items: center;
 }
 
-.voice-btn {
+.voice-btn,
+.attach-btn {
   background: var(--surface);
   color: var(--ink);
   border: 1px solid var(--stroke);
@@ -722,13 +724,15 @@ a {
     background 150ms ease;
 }
 
-.voice-btn:hover {
+.voice-btn:hover,
+.attach-btn:hover {
   border-color: var(--accent);
   box-shadow: 0 12px 24px -20px rgba(255, 106, 61, 0.6);
   transform: translateY(-1px);
 }
 
-.voice-btn:disabled {
+.voice-btn:disabled,
+.attach-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
