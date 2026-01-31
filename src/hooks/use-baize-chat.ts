@@ -143,12 +143,14 @@ export function useBaizeChat() {
 
           setMessages((prev) => {
             const newMessages = [...prev];
-            const reverseIndex = [...newMessages]
-              .reverse()
-              .findIndex((msg) => msg.role === "assistant");
-            if (reverseIndex === -1) return newMessages;
-
-            const assistantIndex = newMessages.length - 1 - reverseIndex;
+            let assistantIndex = -1;
+            for (let i = newMessages.length - 1; i >= 0; i--) {
+              if (newMessages[i].role === "assistant") {
+                assistantIndex = i;
+                break;
+              }
+            }
+            if (assistantIndex === -1) return newMessages;
             const assistantMsg = newMessages[assistantIndex];
 
             if (Object.keys(toolCalls).length > 0) {
