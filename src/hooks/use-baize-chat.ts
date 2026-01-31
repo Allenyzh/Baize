@@ -15,7 +15,6 @@ export function useBaizeChat() {
     language: string;
   } | null>(null);
 
-  console.log(messages);
   useEffect(() => {
     if (typeof chrome !== "undefined" && chrome.storage) {
       chrome.storage.local.get(
